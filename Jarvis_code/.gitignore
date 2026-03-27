@@ -1,0 +1,23 @@
+# Environment variables (API keys, secrets)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+.venv/
+
+# YOLO model weights
+*.pt
+
+# Logs
+control_log.txt
+KMS/logs/
+
+# IDE
+.vscode/
+.idea/

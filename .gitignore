@@ -1,0 +1,29 @@
+# Logs
+control_log.txt
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+**/venv/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.pt
+
+# Node
+**/node_modules/
+.next/
+out/
+build/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

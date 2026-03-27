@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS — Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--c:#00e5ff;--bg:#040810}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:#90b8d0;font-family:'Rajdhani',sans-serif}
+
+/* === LAYOUT === */
+.app{display:grid;grid-template-rows:52px 1fr;grid-template-columns:1fr 380px;height:100vh}
+
+/* Top bar */
+.topbar{grid-column:1/3;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(0,229,255,.02);border-bottom:1px solid rgba(0,229,255,.06)}
+.topbar-left{display:flex;align-items:center;gap:14px}
+.topbar-logo{font-family:'Orbitron';font-weight:700;font-size:.8rem;letter-spacing:.4em;background:linear-gradient(90deg,#00e5ff,#448aff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar-dot{width:8px;height:8px;border-radius:50%;background:#1a2a38;transition:all .4s}
+.topbar-dot.on{background:#00e5ff;box-shadow:0 0 12px #00e5ff}
+.topbar-dot.speak{background:#00ffa3;box-shadow:0 0 12px #00ffa3}
+.topbar-status{font-family:'Share Tech Mono';font-size:.7rem;letter-spacing:.2em;color:#3a6a8a}
+.topbar-right{display:flex;align-items:center;gap:20px}
+.topbar-clock{font-family:'Share Tech Mono';font-size:.72rem;color:rgba(0,229,255,.4);letter-spacing:.1em}
+.topbar-end-btn{font-family:'Orbitron';font-size:.58rem;letter-spacing:.2em;padding:7px 18px;border:1px solid rgba(255,82,82,.2);border-radius:3px;background:rgba(255,82,82,.06);color:#ff5252;cursor:pointer;transition:all .3s}
+.topbar-end-btn:hover{background:rgba(255,82,82,.15);border-color:rgba(255,82,82,.4)}
+
+/* === CENTER: Visualizer === */
+.center{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.center canvas.bg{position:absolute;inset:0}
+.orb-wrap{position:relative;width:300px;height:300px;z-index:1}
+#orbCanvas{width:300px;height:300px}
+.core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100px;height:100px;border-radius:50%;background:radial-gradient(circle at 38% 32%,rgba(0,229,255,.12),rgba(0,40,100,.08) 60%,rgba(4,8,16,.95));box-shadow:0 0 30px rgba(0,229,255,.06);transition:all .6s}
+.core.listening{background:radial-gradient(circle at 38% 32%,rgba(0,229,255,.4),rgba(0,90,170,.18) 60%,rgba(4,8,16,.85));box-shadow:0 0 70px rgba(0,229,255,.22),inset 0 0 40px rgba(0,229,255,.1);animation:cp 2.5s ease-in-out infinite}
+.core.speaking{background:radial-gradient(circle at 38% 32%,rgba(0,255,180,.35),rgba(0,120,100,.15) 60%,rgba(4,8,16,.85));box-shadow:0 0 70px rgba(0,255,180,.22),inset 0 0 40px rgba(0,255,180,.08);animation:cp 1.2s ease-in-out infinite}
+.core.thinking{background:radial-gradient(circle at 38% 32%,rgba(255,200,0,.22),rgba(120,80,0,.1) 60%,rgba(4,8,16,.9));box-shadow:0 0 50px rgba(255,200,0,.14)}
+@keyframes cp{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.07)}}
+
+.state-text{font-family:'Share Tech Mono';font-size:.78rem;letter-spacing:.4em;text-transform:uppercase;color:#3a6a8a;margin-top:18px;z-index:1;transition:color .3s}
+
+/* Mic + Mute */
+.controls{display:flex;gap:16px;margin-top:20px;z-index:1}
+.ctrl-btn{width:50px;height:50px;border-radius:50%;border:1.5px solid rgba(0,229,255,.15);background:rgba(0,229,255,.03);color:var(--c);font-size:1.1rem;cursor:pointer;transition:all .3s;position:relative}
+.ctrl-btn:hover{border-color:rgba(0,229,255,.4);box-shadow:0 0 20px rgba(0,229,255,.08)}
+.ctrl-btn.off{border-color:rgba(255,82,82,.3);color:#ff5252;background:rgba(255,82,82,.06)}
+.mic-ring{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(0,229,255,.1);opacity:0}
+.mic-ring.pulse{opacity:1;animation:ring 2s ease-out infinite}
+@keyframes ring{0%{transform:scale(1);opacity:.4}100%{transform:scale(1.6);opacity:0}}
+
+.session-info{display:flex;gap:28px;margin-top:20px;z-index:1}
+.si{text-align:center}
+.si .l{font-family:'Share Tech Mono';font-size:.48rem;letter-spacing:.25em;color:rgba(0,229,255,.22);text-transform:uppercase}
+.si .v{font-family:'Orbitron';font-size:.68rem;color:rgba(0,229,255,.5);margin-top:2px}
+
+/* === RIGHT: Chat Panel === */
+.chat{display:flex;flex-direction:column;border-left:1px solid rgba(0,229,255,.06);background:rgba(0,8,16,.6)}
+.chat-head{padding:14px 18px;font-family:'Orbitron';font-size:.6rem;letter-spacing:.3em;color:rgba(0,229,255,.25);text-transform:uppercase;border-bottom:1px solid rgba(0,229,255,.05)}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:rgba(0,229,255,.1) transparent}
+.m{max-width:90%;padding:10px 14px;border-radius:10px;font-size:.82rem;line-height:1.6;animation:mi .3s ease-out}
+@keyframes mi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.m.j{align-self:flex-start;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.07);color:#a0d0e8;border-bottom-left-radius:2px}
+.m.u{align-self:flex-end;background:rgba(41,121,255,.07);border:1px solid rgba(41,121,255,.1);color:#90b0d8;border-bottom-right-radius:2px}
+.m.t{align-self:flex-start;font-family:'Share Tech Mono';font-size:.68rem;color:rgba(255,179,0,.55);background:rgba(255,179,0,.03);border:1px solid rgba(255,179,0,.06);padding:6px 12px}
+.m.s{align-self:center;font-family:'Share Tech Mono';font-size:.62rem;color:rgba(0,229,255,.25);background:none;border:none;padding:4px}
+.m .who{display:block;font-family:'Orbitron';font-size:.5rem;letter-spacing:.18em;margin-bottom:3px;opacity:.4}
+.chat-input{display:flex;gap:8px;padding:10px 14px;border-top:1px solid rgba(0,229,255,.05)}
+.chat-input input{flex:1;background:rgba(0,229,255,.03);border:1px solid rgba(0,229,255,.08);border-radius:6px;padding:10px 12px;color:#a0c8e0;font-family:'Rajdhani';font-size:.85rem;outline:none;transition:border .3s}
+.chat-input input::placeholder{color:rgba(0,229,255,.18)}
+.chat-input input:focus{border-color:rgba(0,229,255,.25)}
+.chat-input button{width:38px;border:1px solid rgba(0,229,255,.12);border-radius:6px;background:rgba(0,229,255,.04);color:var(--c);cursor:pointer;font-size:.9rem;transition:all .3s}
+.chat-input button:hover{background:rgba(0,229,255,.1)}
+
+/* Loading overlay */
+.loading{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s}
+.loading.hide{opacity:0;pointer-events:none}
+.loading-text{font-family:'Share Tech Mono';font-size:.8rem;letter-spacing:.3em;color:rgba(0,229,255,.4)}
+.loading-bar{width:200px;height:2px;background:rgba(0,229,255,.06);border-radius:2px;margin-top:16px;overflow:hidden}
+.loading-bar div{width:30%;height:100%;background:var(--c);border-radius:2px;animation:lb 1s ease-in-out infinite}
+@keyframes lb{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading" id="loading">
+  <div class="loading-text">ESTABLISHING NEURAL LINK</div>
+  <div class="loading-bar"><div></div></div>
+</div>
+
+<div class="app">
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">JARVIS</div>
+      <div class="topbar-dot" id="tDot"></div>
+      <span class="topbar-status" id="tStatus">CONNECTING</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-clock" id="clock"></span>
+      <button class="topbar-end-btn" onclick="endSession()">✕&ensp;END</button>
+    </div>
+  </div>
+
+  <!-- Center: Visualizer -->
+  <div class="center">
+    <canvas class="bg" id="bgC"></canvas>
+    <div class="orb-wrap">
+      <canvas id="orbCanvas" width="300" height="300"></canvas>
+      <div class="core" id="core"></div>
+    </div>
+    <div class="state-text" id="stateText">CONNECTING</div>
+    <div class="controls">
+      <button class="ctrl-btn" id="micBtn" onclick="toggleMic()" title="Toggle microphone">🎤<div class="mic-ring" id="micRing"></div></button>
+    </div>
+    <div class="session-info">
+      <div class="si"><div class="l">Session</div><div class="v" id="rSes">00:00</div></div>
+      <div class="si"><div class="l">Model</div><div class="v">Gemini 2.5</div></div>
+      <div class="si"><div class="l">Audio</div><div class="v" id="rAud">16kHz</div></div>
+    </div>
+  </div>
+
+  <!-- Right: Chat Panel -->
+  <div class="chat">
+    <div class="chat-head">◈ Conversation</div>
+    <div class="chat-msgs" id="msgs"></div>
+    <div class="chat-input">
+      <input id="chatIn" type="text" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendText()">
+      <button onclick="sendText()">▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== GLOBALS ===== */
+const WS_URL=`ws://${location.host}/ws`;
+let ws,micCtx,playCtx,processor,stream,gainNode,analyser;
+let micOn=true,speaking=false,nextPlay=0,sources=[],sessStart=0;
+let audioLevel=0,orbState='idle';
+const wave=new Float32Array(64).fill(0);
+
+/* ===== VIDEO CAPTURE ===== */
+const hiddenVid=document.createElement('video');hiddenVid.autoplay=true;hiddenVid.playsInline=true;
+const hiddenCnv=document.createElement('canvas');hiddenCnv.width=640;hiddenCnv.height=480;
+const hiddenCtx=hiddenCnv.getContext('2d');
+let vidLoop=null;
+
+/* ===== DOM ===== */
+const $=id=>document.getElementById(id);
+const core=$('core'),stateText=$('stateText'),tDot=$('tDot'),tStatus=$('tStatus');
+const msgs=$('msgs'),micBtn=$('micBtn'),micRing=$('micRing');
+
+/* ===== CLOCK ===== */
+(function ck(){const n=new Date();$('clock').textContent=n.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true})+' · '+n.toLocaleDateString('en-US',{weekday:'short',day:'numeric',month:'short'});setTimeout(ck,1000)})();
+setInterval(()=>{if(!sessStart)return;const s=(Date.now()-sessStart)/1000|0;$('rSes').textContent=`${String(s/60|0).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`},1000);
+
+/* ===== STATE ===== */
+function setState(s){
+  const map={listening:'LISTENING',speaking:'RESPONDING',thinking:'PROCESSING','':'DISCONNECTED',connected:'CONNECTED'};
+  stateText.textContent=map[s]||'';
+  stateText.style.color=s==='speaking'?'#00ffa3':s==='listening'?'#00e5ff':s==='thinking'?'#ffb300':'#3a6a8a';
+  tStatus.textContent=map[s]||'OFFLINE';
+  tDot.className='topbar-dot'+(s==='speaking'?' on speak':s&&s!==''?' on':'');
+  core.className='core'+(s?' '+s:'');
+  orbState=s||'idle';
+}
+
+function addMsg(txt,cls,who){
+  const d=document.createElement('div');d.className='m '+cls;
+  if(who)d.innerHTML=`<span class="who">${who}</span>${txt}`;else d.textContent=txt;
+  msgs.appendChild(d);msgs.scrollTop=1e6;
+}
+
+/* ===== BG PARTICLES ===== */
+const bgC=$('bgC'),bx=bgC.getContext('2d');
+const ro=new ResizeObserver(()=>{bgC.width=bgC.parentElement.clientWidth;bgC.height=bgC.parentElement.clientHeight});
+ro.observe(bgC.parentElement);
+const pts=Array.from({length:35},()=>({x:Math.random(),y:Math.random(),vx:(Math.random()-.5)*.0015,vy:(Math.random()-.5)*.0015,r:Math.random()+.3}));
+(function drawBg(){const W=bgC.width,H=bgC.height;bx.clearRect(0,0,W,H);
+  for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>1)p.vx*=-1;if(p.y<0||p.y>1)p.vy*=-1;
+    bx.beginPath();bx.arc(p.x*W,p.y*H,p.r,0,6.28);bx.fillStyle='rgba(0,229,255,.1)';bx.fill();
+    for(const q of pts){const dx=(p.x-q.x)*W,dy=(p.y-q.y)*H;if(dx*dx+dy*dy<15000){bx.beginPath();bx.moveTo(p.x*W,p.y*H);bx.lineTo(q.x*W,q.y*H);bx.strokeStyle='rgba(0,229,255,.025)';bx.lineWidth=.5;bx.stroke()}}}
+  requestAnimationFrame(drawBg)})();
+
+/* ===== ORB ===== */
+const oC=$('orbCanvas'),ox=oC.getContext('2d');const OC=150;let rA=0;
+(function drawOrb(){ox.clearRect(0,0,300,300);rA+=.004;const t=performance.now()*.001;
+  const al=orbState==='idle'?.08:orbState==='listening'?.28:orbState==='speaking'?.5:.18;
+  const hue=orbState==='speaking'?160:orbState==='thinking'?45:190;
+  for(let i=0;i<48;i++){const a=rA+i/48*6.28,r=135+Math.sin(t*2+i*.4)*2;
+    ox.beginPath();ox.arc(OC+Math.cos(a)*r,OC+Math.sin(a)*r,orbState==='idle'?.5:1+audioLevel*.5,0,6.28);
+    ox.fillStyle=`hsla(${hue},100%,60%,${al})`;ox.fill()}
+  ox.beginPath();for(let i=0;i<=100;i++){const a=-rA*.7+i/100*6.28,w=orbState!=='idle'?wave[i%64]*20*audioLevel:0,r=108+Math.sin(t*1.5+i*.15)*1.5+w;
+    const px=OC+Math.cos(a)*r,py=OC+Math.sin(a)*r;i?ox.lineTo(px,py):ox.moveTo(px,py)}
+  ox.closePath();ox.strokeStyle=`hsla(${hue},100%,55%,${al*.9})`;ox.lineWidth=1.2;ox.stroke();
+  ox.beginPath();for(let i=0;i<=72;i++){const a=i/72*6.28,w=orbState!=='idle'?wave[i%64]*10*(audioLevel+.2):0,r=72+Math.sin(t*3+i*.25)+w;
+    const px=OC+Math.cos(a)*r,py=OC+Math.sin(a)*r;i?ox.lineTo(px,py):ox.moveTo(px,py)}
+  ox.closePath();ox.strokeStyle=`hsla(${hue},100%,50%,${al*.6})`;ox.lineWidth=.7;ox.stroke();
+  for(let s=0;s<3;s++){const sa=rA*1.3+s*6.28/3;ox.beginPath();ox.arc(OC,OC,122,sa,sa+.5);ox.strokeStyle=`hsla(${hue},100%,55%,${al*.45})`;ox.lineWidth=1.8;ox.stroke()}
+  const g=ox.createRadialGradient(OC,OC,0,OC,OC,60);g.addColorStop(0,`hsla(${hue},100%,60%,${.015+audioLevel*.05})`);g.addColorStop(1,'transparent');
+  ox.fillStyle=g;ox.fillRect(0,0,300,300);requestAnimationFrame(drawOrb)})();
+
+/* ===== AUDIO PLAYBACK (24kHz) ===== */
+function initPlay(){playCtx=new AudioContext({sampleRate:24000});gainNode=playCtx.createGain();gainNode.connect(playCtx.destination);nextPlay=0;sources=[]}
+function playAudio(b64){
+  if(!playCtx)initPlay();if(!speaking){speaking=true;setState('speaking')}
+  const raw=atob(b64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+  const i16=new Int16Array(bytes.buffer),f32=new Float32Array(i16.length);let mx=0;
+  for(let i=0;i<i16.length;i++){f32[i]=i16[i]/32768;const a=Math.abs(f32[i]);if(a>mx)mx=a}
+  audioLevel=Math.min(mx*3,1);const step=Math.max(1,f32.length/64|0);for(let i=0;i<64;i++)wave[i]=Math.abs(f32[i*step]||0);
+  const buf=playCtx.createBuffer(1,f32.length,24000);buf.getChannelData(0).set(f32);
+  const src=playCtx.createBufferSource();src.buffer=buf;src.connect(gainNode);
+  const t=Math.max(playCtx.currentTime+.02,nextPlay);src.start(t);nextPlay=t+buf.duration;
+  sources.push(src);src.onended=()=>{sources=sources.filter(x=>x!==src)}
+}
+function stopPlay(){sources.forEach(s=>{try{s.stop()}catch(e){}});sources=[];nextPlay=0;speaking=false;audioLevel=0;wave.fill(0)}
+
+/* ===== MIC & CAM (16kHz Audio, 4FPS Video) ===== */
+async function startMic(){
+  try {
+    stream=await navigator.mediaDevices.getUserMedia({
+      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},
+      video:{width:640,height:480,facingMode:"user"}
+    });
+  } catch (e) {
+    console.warn("Camera failed, falling back to audio only");
+    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  }
+  
+  if (stream.getVideoTracks().length > 0) {
+    hiddenVid.srcObject=stream;
+    vidLoop=setInterval(()=>{
+      if(!ws||ws.readyState!==1||!micOn)return;
+      hiddenCtx.drawImage(hiddenVid,0,0,640,480);
+      const b64=hiddenCnv.toDataURL('image/jpeg',0.5).split(',')[1];
+      ws.send(JSON.stringify({type:'video',data:b64}));
+    }, 250); // 4 FPS
+  }
+
+  micCtx=new AudioContext({sampleRate:16000});
+  const src=micCtx.createMediaStreamSource(stream);
+  analyser=micCtx.createAnalyser();analyser.fftSize=256;src.connect(analyser);
+  const aD=new Uint8Array(analyser.frequencyBinCount);
+  setInterval(()=>{if(orbState!=='listening')return;analyser.getByteFrequencyData(aD);let s=0;for(let i=0;i<aD.length;i++)s+=aD[i];audioLevel=Math.min(s/aD.length/80,1)},60);
+  processor=micCtx.createScriptProcessor(4096,1,1);
+  processor.onaudioprocess=e=>{if(!ws||ws.readyState!==1||!micOn)return;
+    const f=e.inputBuffer.getChannelData(0),i16=new Int16Array(f.length);
+    for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i]));i16[i]=s<0?s*0x8000:s*0x7FFF}
+    const u=new Uint8Array(i16.buffer);let b='';for(let i=0;i<u.length;i++)b+=String.fromCharCode(u[i]);
+    ws.send(JSON.stringify({type:'audio',data:btoa(b)}))};
+  src.connect(processor);processor.connect(micCtx.destination)
+}
+function stopMic(){if(vidLoop){clearInterval(vidLoop);vidLoop=null}if(processor){processor.disconnect();processor=null}if(micCtx){micCtx.close();micCtx=null}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}}
+function toggleMic(){micOn=!micOn;micBtn.classList.toggle('off',!micOn);micRing.classList.toggle('pulse',micOn)}
+
+/* ===== WEBSOCKET ===== */
+function connect(){
+  addMsg('Connecting to Jarvis...','s');
+  ws=new WebSocket(WS_URL);
+  ws.onopen=()=>{addMsg('Connection established.','s')};
+  ws.onmessage=e=>{
+    const m=JSON.parse(e.data);
+    if(m.type==='audio'){playAudio(m.data)}
+    else if(m.type==='text'){addMsg(m.data,'j','JARVIS')}
+    else if(m.type==='turn_complete'){stopPlay();setState('listening')}
+    else if(m.type==='interrupted'){stopPlay();setState('listening')}
+    else if(m.type==='status'){
+      if(m.data==='connected'){
+        $('loading').classList.add('hide');
+        setState('listening');sessStart=Date.now();
+        micRing.classList.add('pulse');
+        startMic();initPlay();
+        addMsg('System online. Microphone active.','s');
+      }
+    }
+    else if(m.type==='tool'){addMsg('⚙ Using '+m.data+'...','t')}
+    else if(m.type==='error'){addMsg('Error: '+m.data,'t')}
+  };
+  ws.onclose=()=>{setState('');addMsg('Session ended.','s');sessStart=0};
+  ws.onerror=()=>{addMsg('Connection failed.','t')};
+}
+
+function endSession(){if(ws)ws.close();stopMic();stopPlay();setState('');setTimeout(()=>location.href='/',500)}
+
+function sendText(){const inp=$('chatIn'),t=inp.value.trim();if(!t)return;
+  if(!ws||ws.readyState!==1){addMsg('Not connected.','t');return}
+  addMsg(t,'u','YOU');ws.send(JSON.stringify({type:'text',data:t}));inp.value=''}
+
+/* ===== AUTO-CONNECT ===== */
+connect();
+</script>
+</body>
+</html>
