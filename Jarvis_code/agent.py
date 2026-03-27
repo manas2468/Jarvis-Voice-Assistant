@@ -132,21 +132,24 @@ async def entrypoint(ctx: agents.JobContext):
         agent=agent_instance,
         room_input_options=RoomInputOptions(),
     )
-    await asyncio.sleep(1)
+    logger.info("Agent session started. Waiting for audio pipeline...")
+    await asyncio.sleep(2.5)
     
     instructions, reply_prompt = get_fresh_prompts()
+    logger.info(f"Triggering greeting: {reply_prompt}")
     try:
-        await session.generate_reply(
-            instructions=reply_prompt
-        )
-        logger.info(f"Greeting requested: {reply_prompt}")
+        # Instead of just instructions, we add a user message to trigger a response
+        session.history.add_message(role="user", content=reply_prompt)
+        await session.generate_reply()
+        logger.info("Greeting completed.")
     except Exception as e:
-        logger.error(f"Failed to generate greeting: {e}")
+        logger.error(f"Failed to generate welcome message: {e}")
 
+    # WAIT before starting the memory injection to avoid canceling the greeting
+    await asyncio.sleep(3)
+    
     # Fire-and-forget: fetch memories in background
     asyncio.create_task(_fetch_memories_background(session, user_id))
-
-    # Connect MCP server and register tools in background (non-blocking)
 
     # Connect MCP server and register tools in background (non-blocking)
     asyncio.create_task(_connect_mcp_tools(agent_instance))
