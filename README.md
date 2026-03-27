@@ -52,11 +52,6 @@ Complete steps to follow to download the Jarvis on your system:
 
      	- pnpm add -D concurrently
 
-6\. Run Jarvis - pnpm dev
-
-Face any issue watch this video - https://youtu.be/4iHWejxS3\_s
-
-You can also read this conversation - https://chatgpt.com/share/69317f5d-85e4-800c-980d-98083169d55e
 
 
 
